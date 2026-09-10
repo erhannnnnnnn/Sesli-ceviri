@@ -1,0 +1,42 @@
+name: Build DepthLayers APK
+
+on:
+  push:
+    branches: [ depthlayers-build ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Download Depth Anything V2 Small ONNX
+        run: |
+          mkdir -p app/src/main/assets
+          curl -L --fail --retry 3 -o app/src/main/assets/depth_anything_v2_small.onnx \
+            https://huggingface.co/onnx-community/Depth-Anything-V2-Small/resolve/main/onnx/model_fp16.onnx?download=true
+          test -s app/src/main/assets/depth_anything_v2_small.onnx
+          ls -lh app/src/main/assets/depth_anything_v2_small.onnx
+
+      - name: Build debug APK
+        run: gradle --no-daemon :app:assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DepthLayers-Debug-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
